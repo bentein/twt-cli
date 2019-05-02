@@ -1,0 +1,15 @@
+[package]
+name = "twt"
+version = "0.1.0"
+authors = ["Bentein Thomassen <benteinvathnethomassen@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+structopt = "0.2.15"
+reqwest = "0.9.15"
+url = "1.7.2"
+webbrowser = "0.5.1"
+rust-crypto = "0.2.36"
+base64 = "0.10.1"
+rand = "0.6.5"
+dirs = "1.0.5"
