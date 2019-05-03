@@ -1,6 +1,7 @@
 mod authorize;
 mod authenticate;
 mod timeline;
+mod tweet;
 
 use structopt::StructOpt;
 
@@ -13,13 +14,25 @@ pub enum Cli {
     Timeline {
         #[structopt(short = "u", long = "user")]
         user: Option<String>,
-        count: Option<i8>
+        #[structopt(short = "c", long = "count")]
+        count: Option<String>,
+        #[structopt(long = "max")]
+        max: Option<String>,
     },
     #[structopt(name = "followers", about = "Gets followers of active or provided user")]
     Followers {
         #[structopt(short = "u", long = "user")]
-        user: Option<String>
+        user: Option<String>,
     },
+    #[structopt(name = "tweet", about = "Posts a tweet as active user")]
+    Tweet {
+        #[structopt(required_unless = "delete", required_unless = "show", conflicts_with = "delete", conflicts_with = "show")]
+        status: Option<String>,
+        #[structopt(short = "d", long = "delete")]
+        delete: Option<String>,
+        #[structopt(long = "id", conflicts_with = "delete")]
+        show: Option<String>,
+    }
 }
 
 fn main() -> std::io::Result<()> {
@@ -27,8 +40,9 @@ fn main() -> std::io::Result<()> {
 
     match &command {
         Cli::Authorize {} => authorize::authorize(command),
-        Cli::Timeline { user, count:_ } => timeline::get_timeline(user),
+        Cli::Timeline { user, count , max} => { timeline::get_timeline(user, count, max)?; },
         Cli::Followers { user:_ } => get_followers(command),
+        Cli::Tweet { status, delete, show } => { tweet::tweet(status, delete, show)?; },
     }
 
     Ok(())

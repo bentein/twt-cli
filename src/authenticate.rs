@@ -47,7 +47,7 @@ pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str
     Ok(header_map)
 }
 
-pub fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>) -> std::io::Result<String> {
+fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>) -> std::io::Result<String> {
 
     let params: Vec<(&str, &str)> = _params.clone();
     let mut key_tuple: (&str, &str) = ("", "");
@@ -64,13 +64,13 @@ pub fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&s
     let key: &str = &format!("{}&{}", key_tuple.0, key_tuple.1);
 
     let method: String = _method.to_uppercase();
-    let base_url: String = percent_encode(_base_url)?;
+    let base_url: String = percent_encode_string(_base_url)?;
     let parameters: String = get_parameter_string(_params)?;
 
     let signature: String = format!("{}&{}&{}", method, base_url, parameters);
 
     let hmac_encoded: String = hmac_sha1(&signature, key)?;
-    let percent_encode: String = percent_encode(&hmac_encoded)?;
+    let percent_encode: String = percent_encode_string(&hmac_encoded)?;
 
     Ok(percent_encode)
 }
@@ -88,12 +88,12 @@ fn get_parameter_string(mut params: Vec<(&str,&str)>) -> std::io::Result<String>
     }
 
     dst.truncate(dst.len() - 1);
-    dst = percent_encode(&dst)?;
+    dst = percent_encode_string(&dst)?;
 
     Ok(dst)
 }
 
-fn percent_encode(src: &str) -> std::io::Result<String> {
+pub fn percent_encode_string(src: &str) -> std::io::Result<String> {
 
     let reserved: [u8; 66] = [
         0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
@@ -136,7 +136,6 @@ fn hmac_sha1(_message: &str, _key: &str) -> std::io::Result<String> {
 
     Ok(result)
 }
-
 
 fn generate_nonce() -> String {
     

@@ -1,53 +1,111 @@
 use crate::authenticate;
 
-pub fn get_timeline(user: &Option<String>) {
+pub fn get_timeline(user: &Option<String>, count: &Option<String>, max: &Option<String>) -> std::io::Result<()> {
 
     match user {
-        Some(username) => { get_user_timeline(username).unwrap(); },
-        None => { get_own_timeline().unwrap(); },
+        Some(username) => get_user_timeline(username, count, max),
+        None => get_own_timeline(count, max),
     }
+
 }
 
-fn get_user_timeline(username: &str) -> std::io::Result<()> {
+fn get_user_timeline(username: &str, _count: &Option<String>, _max: &Option<String>) -> std::io::Result<()> {
 
     let client = reqwest::Client::new();
+    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN")].to_vec();
+    let mut req_params: Vec<(&str,&str)> = Vec::new();
 
     let user = ("screen_name", username);
+    params.push(user);
+    req_params.push(user);
+
+    let count: (&str, &str) = unwrap_parameter("count", _count)?;
+    if count.0 != "" {
+        params.push(count);
+        req_params.push(count);
+    }
+
+    let max: (&str, &str) = unwrap_parameter("max_id", _max)?;
+    if max.0 != "" {
+        params.push(max);
+        req_params.push(max);
+    }
 
     let base_url = "https://api.twitter.com/1.1/statuses/user_timeline.json";
-    let params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN"),user].to_vec();
+    let url = get_full_request_url(base_url, req_params)?;
 
     let headers = authenticate::get_authorization_header("get", base_url, params)?;
-    let url = format!("{}?{}={}", base_url, user.0, user.1);
 
     let res = client.get(&url)
         .headers(headers)
         .send().unwrap()
         .text();
 
-    println!("{:?}", res);
+    println!("{}", res.unwrap());
 
     Ok(())
 
 }
 
-fn get_own_timeline() -> std::io::Result<()> {
+fn get_own_timeline(_count: &Option<String>, _max: &Option<String>) -> std::io::Result<()> {
 
     let client = reqwest::Client::new();
-    
+    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN")].to_vec();
+    let mut req_params: Vec<(&str,&str)> = Vec::new();
+
+    let count: (&str, &str) = unwrap_parameter("count", _count)?;
+    if count.0 != "" {
+        params.push(count);
+        req_params.push(count);
+    }
+
+    let max: (&str, &str) = unwrap_parameter("max_id", _max)?;
+    if max.0 != "" {
+        params.push(max);
+        req_params.push(max);
+    }
+
     let base_url = "https://api.twitter.com/1.1/statuses/home_timeline.json";
-    let params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN")].to_vec();
+    let url = get_full_request_url(base_url, req_params)?;
 
     let headers = authenticate::get_authorization_header("get", base_url, params)?;
 
-    println!("{:?}", headers);
-
-    let res = client.get(base_url)
+    let res = client.get(&url)
         .headers(headers)
         .send().unwrap()
         .text();
     
-    println!("{:?}", res);
+    println!("{}", res.unwrap());
 
     Ok(())
+
+}
+
+fn get_full_request_url(base_url: &str, req_params: Vec<(&str,&str)>) -> std::io::Result<String> {
+
+    let mut url: String = String::new();
+    url.push_str(base_url);
+
+    if !req_params.is_empty() {
+        let first_param: &(&str, &str) = req_params.get(0).unwrap();
+        url = format!("{}?{}={}", url, first_param.0, first_param.1);
+
+        for param in req_params.iter().skip(1) {
+            url = format!("{}&{}={}", url, param.0, param.1);
+        }
+    }
+
+    Ok(url)
+
+}
+
+fn unwrap_parameter<'l>(name: &'l str, _param: &'l Option<String>) -> std::io::Result<(&'l str, &'l str)> {
+
+    Ok(
+        match &_param {
+            Some(p) => (name, p),
+            None => ("",""),
+        }
+    )
+
 }
