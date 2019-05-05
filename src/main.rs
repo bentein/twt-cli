@@ -2,6 +2,8 @@ mod authorize;
 mod authenticate;
 mod timeline;
 mod tweet;
+mod followers;
+mod credentials;
 
 use structopt::StructOpt;
 
@@ -17,7 +19,7 @@ pub enum Cli {
         #[structopt(short = "c", long = "count")]
         count: Option<String>,
         #[structopt(long = "max")]
-        max: Option<String>,
+        max_id: Option<String>,
     },
     #[structopt(name = "followers", about = "Gets followers of active or provided user")]
     Followers {
@@ -38,12 +40,14 @@ pub enum Cli {
 fn main() -> std::io::Result<()> {
     let command = Cli::from_args();
 
-    match &command {
-        Cli::Authorize {} => authorize::authorize(command),
-        Cli::Timeline { user, count , max} => { timeline::get_timeline(user, count, max)?; },
-        Cli::Followers { user:_ } => get_followers(command),
-        Cli::Tweet { status, delete, show } => { tweet::tweet(status, delete, show)?; },
-    }
+    let res: String = match &command {
+        Cli::Authorize {} => String::new(),
+        Cli::Timeline { user, count , max_id} => timeline::get_timeline(user, count, max_id)?,
+        Cli::Followers { user:_ } => String::new(),
+        Cli::Tweet { status, delete, show } => tweet::tweet(status, delete, show)?,
+    };
+
+    println!("{}", res);
 
     Ok(())
 }

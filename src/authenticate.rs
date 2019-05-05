@@ -1,3 +1,5 @@
+use crate::credentials::Credentials;
+
 use std::iter;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
@@ -10,7 +12,7 @@ use crypto::sha1::Sha1;
 
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 
-pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str,&str)>) -> std::io::Result<HeaderMap> {
+pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<HeaderMap> {
 
     let mut params: Vec<(&str,&str)> = _params.clone();
     let mut header_map = HeaderMap::new();
@@ -26,7 +28,7 @@ pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str
 
     let auth: Vec<(&str,&str)> = params.clone();
 
-    let signature: String = get_oauth_signature(method, base_url, auth)?;
+    let signature: String = get_oauth_signature(method, base_url, auth, credentials)?;
 
     params.push(("oauth_signature", signature.as_str()));
 
@@ -47,17 +49,17 @@ pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str
     Ok(header_map)
 }
 
-fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>) -> std::io::Result<String> {
+fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<String> {
 
     let params: Vec<(&str, &str)> = _params.clone();
     let mut key_tuple: (&str, &str) = ("", "");
 
     for p in params {
         if p.0 == "oauth_consumer_key" {
-            key_tuple.0 = "IMC0fpDcLgmTBmTuWrwzX4BciLDPExAjMmqhiDM5JagzuqSp1X";
+            key_tuple.0 = &credentials.app.application_secret;
         }
         if p.0 == "oauth_token" {
-            key_tuple.1 = "noxb9bdwPDXg9FfRzPxgtgkcEAC2Is3U6oxzXjFsgdn2t";
+            key_tuple.1 = &credentials.user.oauth_token_secret;
         }
     }
 

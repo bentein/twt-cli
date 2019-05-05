@@ -1,18 +1,22 @@
 use crate::authenticate;
+use crate::credentials;
+use crate::credentials::{Credentials};
 
-pub fn get_timeline(user: &Option<String>, count: &Option<String>, max: &Option<String>) -> std::io::Result<()> {
+pub fn get_timeline(user: &Option<String>, count: &Option<String>, max_id: &Option<String>) -> std::io::Result<String> {
 
     match user {
-        Some(username) => get_user_timeline(username, count, max),
-        None => get_own_timeline(count, max),
+        Some(username) => get_user_timeline(username, count, max_id),
+        None => get_own_timeline(count, max_id),
     }
 
 }
 
-fn get_user_timeline(username: &str, _count: &Option<String>, _max: &Option<String>) -> std::io::Result<()> {
+fn get_user_timeline(username: &str, _count: &Option<String>, _max_id: &Option<String>) -> std::io::Result<String> {
 
     let client = reqwest::Client::new();
-    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN")].to_vec();
+    let credentials: Credentials = credentials::get_active_credentials()?;
+
+    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key",credentials.app.application_key.as_str()),("oauth_token",&credentials.user.oauth_token)].to_vec();
     let mut req_params: Vec<(&str,&str)> = Vec::new();
 
     let user = ("screen_name", username);
@@ -25,32 +29,32 @@ fn get_user_timeline(username: &str, _count: &Option<String>, _max: &Option<Stri
         req_params.push(count);
     }
 
-    let max: (&str, &str) = unwrap_parameter("max_id", _max)?;
-    if max.0 != "" {
-        params.push(max);
-        req_params.push(max);
+    let max_id: (&str, &str) = unwrap_parameter("max_id", _max_id)?;
+    if max_id.0 != "" {
+        params.push(max_id);
+        req_params.push(max_id);
     }
 
     let base_url = "https://api.twitter.com/1.1/statuses/user_timeline.json";
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("get", base_url, params)?;
+    let headers = authenticate::get_authorization_header("get", base_url, params, credentials.clone())?;
 
     let res = client.get(&url)
         .headers(headers)
         .send().unwrap()
         .text();
 
-    println!("{}", res.unwrap());
-
-    Ok(())
+    Ok(res.unwrap())
 
 }
 
-fn get_own_timeline(_count: &Option<String>, _max: &Option<String>) -> std::io::Result<()> {
+fn get_own_timeline(_count: &Option<String>, _max_id: &Option<String>) -> std::io::Result<String> {
 
     let client = reqwest::Client::new();
-    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key","NmnoD1Pew3ho5ZoHITn1JjaLw"),("oauth_token","31216914-ta4Vira4eL8dUl59WH0Q3zPhBiYcc05DgSuaQEGVN")].to_vec();
+    let credentials: Credentials = credentials::get_active_credentials()?;
+
+    let mut params: Vec<(&str,&str)> = [("oauth_consumer_key",credentials.app.application_key.as_str()),("oauth_token",&credentials.user.oauth_token)].to_vec();
     let mut req_params: Vec<(&str,&str)> = Vec::new();
 
     let count: (&str, &str) = unwrap_parameter("count", _count)?;
@@ -59,7 +63,7 @@ fn get_own_timeline(_count: &Option<String>, _max: &Option<String>) -> std::io::
         req_params.push(count);
     }
 
-    let max: (&str, &str) = unwrap_parameter("max_id", _max)?;
+    let max: (&str, &str) = unwrap_parameter("max_id", _max_id)?;
     if max.0 != "" {
         params.push(max);
         req_params.push(max);
@@ -68,16 +72,14 @@ fn get_own_timeline(_count: &Option<String>, _max: &Option<String>) -> std::io::
     let base_url = "https://api.twitter.com/1.1/statuses/home_timeline.json";
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("get", base_url, params)?;
+    let headers = authenticate::get_authorization_header("get", base_url, params, credentials.clone())?;
 
     let res = client.get(&url)
         .headers(headers)
         .send().unwrap()
         .text();
-    
-    println!("{}", res.unwrap());
 
-    Ok(())
+    Ok(res.unwrap())
 
 }
 

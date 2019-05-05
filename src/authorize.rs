@@ -8,6 +8,7 @@ use std::fs::File;
 
 use webbrowser;
 
+/*
 pub fn authorize(_args: Cli) {
 
     let request_tokens: OauthTokens = get_request_token().unwrap();
@@ -142,3 +143,4 @@ impl CallbackParams {
         }
     }
 }
+*/
