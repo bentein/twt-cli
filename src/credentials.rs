@@ -31,7 +31,6 @@ fn get_active_credentials_from_string(config: String) -> std::io::Result<Credent
     Ok(Credentials::new(app_credentials, user_credentials))
 }
 
-
 #[allow(dead_code)]
 pub fn get_application_credentials() -> std::io::Result<ApplicationCredentials> {
 
@@ -544,6 +543,15 @@ impl UserCredentials {
             name,
             oauth_token,
             oauth_token_secret
+        }
+    }
+
+    pub fn empty() -> Self {
+
+        Self {
+            name: String::new(),
+            oauth_token: String::new(),
+            oauth_token_secret: String::new(),
         }
     }
 }

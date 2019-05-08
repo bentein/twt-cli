@@ -12,7 +12,7 @@ use crypto::sha1::Sha1;
 
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 
-pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<HeaderMap> {
+pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str,&str)>, credentials: &Credentials) -> std::io::Result<HeaderMap> {
 
     let mut params: Vec<(&str,&str)> = _params.clone();
     let mut header_map = HeaderMap::new();
@@ -49,7 +49,7 @@ pub fn get_authorization_header(method: &str, base_url: &str, _params: Vec<(&str
     Ok(header_map)
 }
 
-fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<String> {
+fn get_oauth_signature(_method: &str, _base_url: &str, _params: Vec<(&str,&str)>, credentials: &Credentials) -> std::io::Result<String> {
 
     let params: Vec<(&str, &str)> = _params.clone();
     let mut key_tuple: (&str, &str) = ("", "");

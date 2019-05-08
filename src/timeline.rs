@@ -52,7 +52,7 @@ fn get_user_timeline(params: Vec<(&str,&str)>, req_params: Vec<(&str,&str)>, cre
     let base_url = "https://api.twitter.com/1.1/statuses/user_timeline.json";
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("get", base_url, params, credentials.clone())?;
+    let headers = authenticate::get_authorization_header("get", base_url, params, &credentials)?;
 
     let res = client.get(&url)
         .headers(headers)
@@ -70,7 +70,7 @@ fn get_own_timeline(params: Vec<(&str,&str)>, req_params: Vec<(&str,&str)>, cred
     let base_url = "https://api.twitter.com/1.1/statuses/home_timeline.json";
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("get", base_url, params, credentials.clone())?;
+    let headers = authenticate::get_authorization_header("get", base_url, params, &credentials)?;
 
     let res = client.get(&url)
         .headers(headers)

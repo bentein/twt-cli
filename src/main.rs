@@ -11,9 +11,11 @@ use structopt::StructOpt;
 #[structopt(name = "twt", about = "The Twitter API Command Line Interface for serious developers")]
 pub enum Cli {
     #[structopt(name = "authorize", about = "Authorize twt-cli to access your account")]
-    Authorize {
+    Authorize {},
+    #[structopt(name = "credentials", about = "Modify stored credentials used by twt-cli")]
+    Credentials {
         #[structopt(subcommand)]
-        auth_type: AuthType,
+        credentials_type: CredentialsType,
     },
     #[structopt(name = "timeline", about = "Gets timeline of active or provided user")]
     Timeline {
@@ -41,32 +43,58 @@ pub enum Cli {
 }
 
 #[derive(StructOpt, Debug)]
-pub enum AuthType {
-    #[structopt(name = "user")]
-    User {
-        #[structopt(short = "d", long = "delete", conflicts_with = "activate")]
-        delete: bool,
-        #[structopt(short = "a", long = "active")]
-        active: bool,
-        name: String,
-        #[structopt(required_unless = "delete", required_unless = "active")]
-        token: Option<String>,
-        #[structopt(required_unless = "delete", required_unless = "active")]
-        secret: Option<String>,
-    },
+pub enum CredentialsType {
     #[structopt(name = "app")]
     App {
-        token: String,
-        secret: String,
-    }
+        #[structopt(subcommand)]
+        action: AppMod,
+    },
+    #[structopt(name = "user")]
+    User {
+        #[structopt(subcommand)]
+        action: UserMod,
+    },
 }
 
+#[derive(StructOpt, Debug)]
+pub enum AppMod {
+    #[structopt(name = "add")]
+    Add {
+        token: String,
+        secret: String,
+    },
+}
+
+#[derive(StructOpt, Debug)]
+pub enum UserMod {
+    #[structopt(name = "add")]
+    Add {
+        name: String,
+        token: String,
+        secret: String,
+    },
+    #[structopt(name = "activate")]
+    Activate {
+        name: String,
+    },
+    #[structopt(name = "delete")]
+    Delete {
+        name: String,
+    },
+    #[structopt(name = "set")]
+    Set {
+        name: String,
+        token: String,
+        secret: String,
+    },
+}
 
 fn main() -> std::io::Result<()> {
     let command = Cli::from_args();
 
     let res: String = match &command {
-        Cli::Authorize { auth_type } => do_authorize(auth_type)?,
+        Cli::Authorize { } => authorize::authorize()?,
+        Cli::Credentials { credentials_type } => do_credentials(credentials_type)?,
         Cli::Timeline { user, count , max_id} => timeline::get_timeline(user, count, max_id)?,
         Cli::Followers { user:_ } => String::new(),
         Cli::Tweet { status, delete, show } => tweet::tweet(status, delete, show)?,
@@ -77,14 +105,27 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn do_authorize(auth_type: &AuthType) -> std::io::Result<String> {
+fn do_credentials(credentials_type: &CredentialsType) -> std::io::Result<String> {
 
-    match auth_type {
-        AuthType::User { delete, active, name, token, secret} =>
-            authorize::authorize_user(delete, active, name, token, secret),
-        AuthType::App { token, secret } => authorize::authorize_app(token, secret),
+    match credentials_type {
+        CredentialsType::App { action } => {
+
+            match action {
+                AppMod::Add { token, secret} => credentials::set_application_credentials(token, secret),
+            }
+        },
+        CredentialsType::User { action} => {
+
+            match action {
+
+                UserMod::Add { name, token, secret } => credentials::add_new_user_credentials(name, token, secret),
+                UserMod::Activate { name } => credentials::set_active_user(name),
+                UserMod::Delete { name } => credentials::delete_user_credentials(name),
+                UserMod::Set { name, token, secret } => Ok("Not yet implemented".to_string()),
+
+            }
+        }
     }
-
 }
 
 fn get_followers(args: Cli) -> () {

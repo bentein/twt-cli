@@ -15,17 +15,17 @@ pub fn tweet(status: &Option<String>, delete: &Option<String>, show: &Option<Str
 
 }
 
-fn do_function(arg: &str, func: &Fn(&str, Vec<(&str,&str)>, Credentials) -> std::io::Result<String>) -> std::io::Result<String> {
+fn do_function(arg: &str, func: &Fn(&str, Vec<(&str,&str)>, &Credentials) -> std::io::Result<String>) -> std::io::Result<String> {
 
     let credentials: Credentials = credentials::get_active_credentials()?;
 
     let params: Vec<(&str,&str)> = [("oauth_consumer_key",credentials.app.application_key.as_str()),("oauth_token",&credentials.user.oauth_token)].to_vec();
 
-    func(arg, params, credentials.clone())
+    func(arg, params, &credentials)
 
 }
 
-fn do_tweet(_status: &str, _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<String> {
+fn do_tweet(_status: &str, _params: Vec<(&str,&str)>, credentials: &Credentials) -> std::io::Result<String> {
 
     let client = reqwest::Client::new();
     let mut params: Vec<(&str,&str)> = _params.clone();
@@ -39,7 +39,7 @@ fn do_tweet(_status: &str, _params: Vec<(&str,&str)>, credentials: Credentials) 
     let base_url = "https://api.twitter.com/1.1/statuses/update.json";
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("post", base_url, params, credentials)?;
+    let headers = authenticate::get_authorization_header("post", base_url, params, &credentials)?;
 
     let res = client.post(&url)
         .headers(headers)
@@ -50,7 +50,7 @@ fn do_tweet(_status: &str, _params: Vec<(&str,&str)>, credentials: Credentials) 
 
 }
 
-fn do_delete(id: &str, mut _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<String> {
+fn do_delete(id: &str, mut _params: Vec<(&str,&str)>, credentials: &Credentials) -> std::io::Result<String> {
 
     let client = reqwest::Client::new();
     let params: Vec<(&str,&str)> = _params.clone();
@@ -59,7 +59,7 @@ fn do_delete(id: &str, mut _params: Vec<(&str,&str)>, credentials: Credentials) 
     let base_url = &*format!("{}{}.json", "https://api.twitter.com/1.1/statuses/destroy/", id);
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("post", base_url, params, credentials)?;
+    let headers = authenticate::get_authorization_header("post", base_url, params, &credentials)?;
 
     let res = client.post(&url)
         .headers(headers)
@@ -70,7 +70,7 @@ fn do_delete(id: &str, mut _params: Vec<(&str,&str)>, credentials: Credentials) 
 
 }
 
-fn do_show(id: &str, mut _params: Vec<(&str,&str)>, credentials: Credentials) -> std::io::Result<String> {
+fn do_show(id: &str, mut _params: Vec<(&str,&str)>, credentials: &Credentials) -> std::io::Result<String> {
 
     let client = reqwest::Client::new();
     let params: Vec<(&str,&str)> = _params.clone();
@@ -79,7 +79,7 @@ fn do_show(id: &str, mut _params: Vec<(&str,&str)>, credentials: Credentials) ->
     let base_url = &*format!("{}{}.json", "https://api.twitter.com/1.1/statuses/show/", id);
     let url = get_full_request_url(base_url, req_params)?;
 
-    let headers = authenticate::get_authorization_header("get", base_url, params, credentials)?;
+    let headers = authenticate::get_authorization_header("get", base_url, params, &credentials)?;
 
     let res = client.get(&url)
         .headers(headers)

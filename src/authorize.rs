@@ -1,25 +1,135 @@
+use crate::authenticate;
 use crate::credentials;
 
-use std::io::{Error, ErrorKind};
+use std::io::{Error, ErrorKind, Write, Read};
+use std::net::{TcpListener, TcpStream};
+use std::path::PathBuf;
+use std::fs::File;
+use crate::credentials::{ApplicationCredentials, Credentials, UserCredentials};
 
-pub fn authorize_user(delete: &bool, active: &bool, name: &str, token: &Option<String>, secret: &Option<String>) -> std::io::Result<String> {
+pub fn authorize() -> std::io::Result<String> {
 
-    match (delete, active) {
-        (false, false) => {
-            match (token, secret) {
-                (Some(token), Some(secret)) => credentials::add_new_user_credentials(name, token, secret),
-                (_,_) => Err(Error::new(ErrorKind::InvalidInput, "Missing arguments")),
-            }
-        },
-        (true, false) => credentials::delete_user_credentials(name),
-        (false, true) => credentials::set_active_user(name),
-        (_,_) => Err(Error::new(ErrorKind::InvalidInput, "Multiple flags cannot be input to 'authorize user' at once")),
-    }
+    let app_credentials: ApplicationCredentials = credentials::get_application_credentials()?;
+    let credentials: Credentials = Credentials::new(app_credentials, UserCredentials::empty());
+    let request_tokens: OauthTokens = get_request_token(&credentials)?;
+
+    webbrowser::open(&("https://api.twitter.com/oauth/authorize?oauth_token=".to_owned() + &request_tokens.oauth_token))
+        .expect("Couldn't open authorization page");
+
+    let listener = TcpListener::bind("127.0.0.1:80").unwrap();
+
+    let callback_result: CallbackParams = match listener.accept() {
+        Ok((socket, _addr)) => handle_callback(socket),
+        Err(e) => panic!("Couldn't get client: {:?}", e),
+    }?;
+
+    let user_credentials: UserCredentials = get_user_credentials(callback_result)?;
+
+    credentials::add_new_user_credentials(&user_credentials.name, &user_credentials.oauth_token, &user_credentials.oauth_token_secret)
 
 }
 
-pub fn authorize_app(token: &str, secret: &str) -> std::io::Result<String> {
+fn get_request_token(credentials: &Credentials) -> std::io::Result<OauthTokens> {
 
-    credentials::set_application_credentials(token, secret)
+    let client = reqwest::Client::new();
 
+    let url: &str = "https://api.twitter.com/oauth/request_token";
+
+    let headers = authenticate::get_authorization_header("post", url, [("oauth_consumer_key",credentials.app.application_key.as_str())].to_vec(), credentials)?;
+
+    let res = client.post(url)
+        .headers(headers)
+        .send().unwrap()
+        .text().unwrap();
+
+    Ok(OauthTokens::new(res)?)
+}
+
+
+fn handle_callback(mut stream: TcpStream) -> std::io::Result<CallbackParams> {
+
+    let mut req_str_opt: Option<String> = None;
+
+    let mut buf = [0u8 ;4096];
+    match stream.read(&mut buf) {
+        Ok(_) => {
+            let _req_str = String::from_utf8_lossy(&buf).to_string();
+            req_str_opt = Some(_req_str.lines().next().unwrap().to_string());
+        },
+        Err(e) => println!("Unable to read stream: {}", e),
+    }
+
+    let req_params = req_str_opt.unwrap().replace("GET /?", "").replace(" HTTP/1.1", "");
+    let params = CallbackParams::new(req_params);
+
+    let response = b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n<html target=\"_blank\"><body>You can close this window now.</body></html>\r\n";
+    stream.write(response)?;
+
+    Ok(params?)
+}
+
+fn get_user_credentials(tokens: CallbackParams) -> std::io::Result<UserCredentials> {
+
+    let oauth_consumer_key = "NmnoD1Pew3ho5ZoHITn1JjaLw";
+
+    let client = reqwest::Client::new();
+
+    let res = client.post("https://api.twitter.com/oauth/access_token")
+        .query(&[("oauth_consumer_key", oauth_consumer_key), ("oauth_token", &tokens.oauth_token), ("oauth_verifier", &tokens.oauth_verifier)])
+        .send().unwrap()
+        .text().unwrap();
+
+    let split: Vec<&str> = res.split("&").collect();
+
+    let name: String = "new_account".to_string();
+    let token: String = split[0].replace("oauth_token=", "");
+    let secret: String = split[1].replace("oauth_token_secret=", "");
+
+    Ok(UserCredentials::new(name, token, secret))
+}
+
+#[derive(Debug)]
+struct OauthTokens {
+    oauth_token: String,
+    oauth_token_secret: String,
+}
+
+impl OauthTokens {
+    pub fn new(params: String) -> std::io::Result<Self> {
+        let split: Vec<&str> = params.split("&").collect();
+
+        match split.len() {
+            3 | 4 => {},
+            _ => return Err(Error::new(ErrorKind::InvalidData, format!("Incorrect authorization payload size {:?}", split))),
+        }
+
+        Ok(Self {
+            oauth_token: split[0].replace("oauth_token=", ""),
+            oauth_token_secret: split[1].replace("oauth_token_secret=", ""),
+        })
+    }
+}
+
+
+
+#[derive(Debug)]
+struct CallbackParams {
+    oauth_token: String,
+    oauth_verifier: String,
+}
+
+impl CallbackParams {
+    pub fn new(params: String) -> std::io::Result<Self> {
+        let split: Vec<&str> = params.split("&").collect();
+
+        match split.len() {
+            2 => {},
+            _ => return Err(Error::new(ErrorKind::PermissionDenied, format!("Authorization request denied"))),
+        }
+
+        Ok(Self {
+            oauth_token: split[0].replace("oauth_token=", ""),
+            oauth_verifier: split[1].replace("oauth_verifier=", ""),
+        })
+    }
 }
