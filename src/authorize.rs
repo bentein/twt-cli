@@ -1,7 +1,7 @@
 use crate::authenticate;
 use crate::credentials;
 
-use std::io::{Error, ErrorKind, Write, Read};
+use std::io::{Error, ErrorKind, Write, Read, BufRead};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::fs::File;
@@ -13,17 +13,19 @@ pub fn authorize() -> std::io::Result<String> {
     let credentials: Credentials = Credentials::new(app_credentials, UserCredentials::empty());
     let request_tokens: OauthTokens = get_request_token(&credentials)?;
 
-    webbrowser::open(&("https://api.twitter.com/oauth/authorize?oauth_token=".to_owned() + &request_tokens.oauth_token))
+    let username = prompt_user_name()?;
+
+    webbrowser::open(&format!("https://api.twitter.com/oauth/authorize?oauth_token={}", &request_tokens.oauth_token))
         .expect("Couldn't open authorization page");
 
-    let listener = TcpListener::bind("127.0.0.1:80").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:17800").unwrap();
 
     let callback_result: CallbackParams = match listener.accept() {
         Ok((socket, _addr)) => handle_callback(socket),
         Err(e) => panic!("Couldn't get client: {:?}", e),
     }?;
 
-    let user_credentials: UserCredentials = get_user_credentials(callback_result)?;
+    let user_credentials: UserCredentials = get_user_credentials(username, &callback_result, &credentials)?;
 
     credentials::add_new_user_credentials(&user_credentials.name, &user_credentials.oauth_token, &user_credentials.oauth_token_secret)
 
@@ -45,6 +47,19 @@ fn get_request_token(credentials: &Credentials) -> std::io::Result<OauthTokens> 
     Ok(OauthTokens::new(res)?)
 }
 
+fn prompt_user_name() -> std::io::Result<String> {
+
+    print!("Input a username to associate with this authorization: ");
+    std::io::stdout().flush()?;
+
+    let stdin = std::io::stdin();
+    let uname = stdin.lock()
+        .lines()
+        .next()
+        .expect("Invalid username input");
+
+    uname
+}
 
 fn handle_callback(mut stream: TcpStream) -> std::io::Result<CallbackParams> {
 
@@ -68,9 +83,9 @@ fn handle_callback(mut stream: TcpStream) -> std::io::Result<CallbackParams> {
     Ok(params?)
 }
 
-fn get_user_credentials(tokens: CallbackParams) -> std::io::Result<UserCredentials> {
+fn get_user_credentials(name: String, tokens: &CallbackParams, credentials: &Credentials) -> std::io::Result<UserCredentials> {
 
-    let oauth_consumer_key = "NmnoD1Pew3ho5ZoHITn1JjaLw";
+    let oauth_consumer_key: &str = &credentials.app.application_key;
 
     let client = reqwest::Client::new();
 
@@ -81,7 +96,6 @@ fn get_user_credentials(tokens: CallbackParams) -> std::io::Result<UserCredentia
 
     let split: Vec<&str> = res.split("&").collect();
 
-    let name: String = "new_account".to_string();
     let token: String = split[0].replace("oauth_token=", "");
     let secret: String = split[1].replace("oauth_token_secret=", "");
 

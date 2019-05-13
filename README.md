@@ -10,45 +10,29 @@ With rust installed, clone this project and run `cargo build --release`. You wil
 
 To be able to send requests to the Twitter API, you need to create a Twitter developer account, and a Twitter API application, at https://developer.twitter.com. Once you have created an account and an application, you need to add your credentials to twt.
 
-Add your application credentials by running:
+Add your application credentials by running `twt credentials app add <application-key> <application-secret>`.
 
-```
-twt authorize app <application-key> <application-secret>
-```
+To use most of twt's features, you need to add user credentials as well. You can authorize the application to use an account by running `twt authorize`. 
 
-To use most of twt's features, you need to add user credentials as well. Keep in mind that only user credentials that have authorized your application to access it. These credentials can be manually added by running:
+These credentials can also be manually added by running `twt credentials user add <username> <oauth-key> <oauth-secret>`. Remember that you must already have authorized the application to access your account for these credentials to work.
 
-```
-twt authorize user <username> <oauth-key> <oauth-secret>
-```
+Several users can be added to the application configuration. You can change the active user by running `twt credentials user activate <username>`.
 
-Several users can be added to the application configuration. You can change the active user by running:
-
-```
-twt authorize user -a <username>
-```
-
-You can remove a set of user credentials by running:
-
-```
-twt authorize user -d <username>
-```
+You can remove a set of user credentials by running `twt credentials user delete <username>`.
 
 ## Usage
 
 Currently, the following Twitter APIs are implemented:
 
 #####Timeline
+
 * statuses/home_timeline
 * statuses/user_timeline
 
 #####Tweets
+
 * statuses/update
 * statuses/destroy/:id
 * statuses/show/:id
 
-To see all subcommands, run:
-
-```
-twt --help
-```
+To see all subcommands, run `twt --help`
