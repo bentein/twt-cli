@@ -1,9 +1,12 @@
 mod authorize;
 mod authenticate;
+mod credentials;
+mod followers;
+mod friendships;
 mod timeline;
 mod tweet;
-mod followers;
-mod credentials;
+
+mod util;
 
 use structopt::StructOpt;
 
@@ -17,6 +20,21 @@ pub enum Cli {
         #[structopt(subcommand)]
         credentials_type: CredentialsType,
     },
+    #[structopt(name = "followers", about = "Gets followers of active or provided user")]
+    Followers {
+        #[structopt(short = "u", long = "user")]
+        user: Option<String>,
+    },
+    #[structopt(name = "follow", about = "Follows provided user")]
+    Follow {
+        screen_name: String,
+        #[structopt(short = "n", long = "notifications")]
+        notifications: bool,
+    },
+    #[structopt(name = "unfollow", about = "Unfollows provided user")]
+    Unfollow {
+        screen_name: String,
+    },
     #[structopt(name = "timeline", about = "Gets timeline of active or provided user")]
     Timeline {
         #[structopt(short = "u", long = "user")]
@@ -25,11 +43,6 @@ pub enum Cli {
         count: Option<String>,
         #[structopt(long = "max")]
         max_id: Option<String>,
-    },
-    #[structopt(name = "followers", about = "Gets followers of active or provided user")]
-    Followers {
-        #[structopt(short = "u", long = "user")]
-        user: Option<String>,
     },
     #[structopt(name = "tweet", about = "Posts a tweet as active user")]
     Tweet {
@@ -95,8 +108,10 @@ fn main() -> std::io::Result<()> {
     let res: String = match &command {
         Cli::Authorize { } => authorize::authorize()?,
         Cli::Credentials { credentials_type } => do_credentials(credentials_type)?,
-        Cli::Timeline { user, count , max_id} => timeline::get_timeline(user, count, max_id)?,
+        Cli::Follow { screen_name, notifications } => friendships::create_friendship(screen_name, notifications)?,
+        Cli::Unfollow { screen_name } => friendships::destroy_friendship(screen_name)?,
         Cli::Followers { user:_ } => String::new(),
+        Cli::Timeline { user, count , max_id} => timeline::get_timeline(user, count, max_id)?,
         Cli::Tweet { status, delete, show } => tweet::tweet(status, delete, show)?,
     };
 

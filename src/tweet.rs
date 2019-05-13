@@ -1,4 +1,4 @@
-use crate::authenticate;
+use crate::{authenticate, util};
 use crate::credentials;
 use crate::credentials::{Credentials};
 
@@ -37,7 +37,7 @@ fn do_tweet(_status: &str, _params: Vec<(&str,&str)>, credentials: &Credentials)
     req_params.push(status);
 
     let base_url = "https://api.twitter.com/1.1/statuses/update.json";
-    let url = get_full_request_url(base_url, req_params)?;
+    let url = util::get_full_request_url(base_url, req_params)?;
 
     let headers = authenticate::get_authorization_header("post", base_url, params, &credentials)?;
 
@@ -57,7 +57,7 @@ fn do_delete(id: &str, mut _params: Vec<(&str,&str)>, credentials: &Credentials)
     let req_params: Vec<(&str,&str)> = Vec::new();
 
     let base_url = &*format!("{}{}.json", "https://api.twitter.com/1.1/statuses/destroy/", id);
-    let url = get_full_request_url(base_url, req_params)?;
+    let url = util::get_full_request_url(base_url, req_params)?;
 
     let headers = authenticate::get_authorization_header("post", base_url, params, &credentials)?;
 
@@ -77,7 +77,7 @@ fn do_show(id: &str, mut _params: Vec<(&str,&str)>, credentials: &Credentials) -
     let req_params: Vec<(&str,&str)> = Vec::new();
 
     let base_url = &*format!("{}{}.json", "https://api.twitter.com/1.1/statuses/show/", id);
-    let url = get_full_request_url(base_url, req_params)?;
+    let url = util::get_full_request_url(base_url, req_params)?;
 
     let headers = authenticate::get_authorization_header("get", base_url, params, &credentials)?;
 
@@ -87,23 +87,5 @@ fn do_show(id: &str, mut _params: Vec<(&str,&str)>, credentials: &Credentials) -
         .text();
 
     Ok(res.unwrap())
-
-}
-
-fn get_full_request_url(base_url: &str, req_params: Vec<(&str,&str)>) -> std::io::Result<String> {
-
-    let mut url: String = String::new();
-    url.push_str(base_url);
-
-    if !req_params.is_empty() {
-        let first_param: &(&str, &str) = req_params.get(0).unwrap();
-        url = format!("{}?{}={}", url, first_param.0, first_param.1);
-
-        for param in req_params.iter().skip(1) {
-            url = format!("{}&{}={}", url, param.0, param.1);
-        }
-    }
-
-    Ok(url)
 
 }

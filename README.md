@@ -35,4 +35,9 @@ Currently, the following Twitter APIs are implemented:
 * statuses/destroy/:id
 * statuses/show/:id
 
+#####Friendships
+
+* friendships/create
+* friendships/destroy
+
 To see all subcommands, run `twt --help`
